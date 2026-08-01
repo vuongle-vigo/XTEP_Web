@@ -194,6 +194,8 @@ def kiem_tra_bang_cong(filename, calamfile='ca_lam_xtep.xlsx'):
     thongke_info = get_chamcong_info(filename)
     ca_lam_dict = parse_ca_lam(calamfile)
     calam_info = lay_calam_theo_filename(filename, ca_lam_dict)
+    if not calam_info:
+        return {}
     result = {}
     for nhanvien, time_in_out in thongke_info.items():
         issues = {}
@@ -215,7 +217,7 @@ def kiem_tra_bang_cong(filename, calamfile='ca_lam_xtep.xlsx'):
             thu = thu_ngay[day - 1][1]
             calam_info_item = calam_info.get(thu)
             calam_true = xac_dinh_ca_lam(time, calam_info_item)
-            # print(f"calam_true: {calam_true}")
+            print(f"calam_true: {calam_true} giolam: {time}")
             bangcong_day = bangcong_info_item[day]
             tangca_day = tangca_info_item.get(day) or 0 if tangca_info_item else 0
             # print(f"bangcong_day: {bangcong_day}")
