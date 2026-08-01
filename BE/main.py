@@ -217,7 +217,6 @@ def kiem_tra_bang_cong(filename, calamfile='ca_lam_xtep.xlsx'):
             thu = thu_ngay[day - 1][1]
             calam_info_item = calam_info.get(thu)
             calam_true = xac_dinh_ca_lam(time, calam_info_item)
-            print(f"calam_true: {calam_true} giolam: {time}")
             bangcong_day = bangcong_info_item[day]
             tangca_day = tangca_info_item.get(day) or 0 if tangca_info_item else 0
             # print(f"bangcong_day: {bangcong_day}")

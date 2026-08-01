@@ -84,7 +84,6 @@ def parse_ca_lam(filename):
     ca_lam_dict = {}
     for i in range(len(ten_cua_hangs)):
         ten_cua_hang = ten_cua_hangs[i]
-        print(ten_cua_hang)
         ca_lam = ca_lams[i]
         shifts = ca_lam.strip().split('\n')
         ca_lam_dict[ten_cua_hang] = parse_schedule(ca_lam)
