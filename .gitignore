@@ -1,0 +1,77 @@
+# Dependencies
+node_modules/
+
+# Next.js / frontend build output
+.next/
+out/
+.turbo/
+.swc/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python caches and build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+pip-wheel-metadata/
+build/
+dist/
+
+# Backend runtime data and uploaded files
+BE/uploads/
+BE/data/
+BE/ca_lam_dict.json
+BE/bangcong_info.json
+BE/tangca_info.json
+BE/chamcong_info.json
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+
+# Temporary files
+*.bak
+*.tmp
+*.temp
+*.pid
+*.pid.lock

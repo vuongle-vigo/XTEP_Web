@@ -1,0 +1,166 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gradient: linear-gradient(135deg, #f04423 0%, #ff6b58 100%);
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  background: #f7f8fa;
+  color: #0f172a;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+html.dark,
+html.dark body {
+  background: #0b1020;
+  color: #e2e8f0;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl border border-slate-200/60 shadow-sm;
+  }
+  .dark .card {
+    @apply bg-slate-900/70 border-slate-700/60 shadow-black/20;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-200 hover:shadow-lg hover:border-slate-300/80 hover:-translate-y-0.5;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm font-medium rounded-xl hover:from-brand-600 hover:to-brand-700 transition-all shadow-md shadow-brand-500/20 hover:shadow-lg hover:shadow-brand-500/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-slate-700 text-sm font-medium rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .dark .btn-secondary {
+    @apply bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:border-slate-600;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-2 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-100 transition-all;
+  }
+  .dark .btn-ghost {
+    @apply text-slate-300 hover:bg-slate-800;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full;
+  }
+
+  .badge-error {
+    @apply badge bg-red-100 text-red-700;
+  }
+  .dark .badge-error {
+    @apply bg-red-950/60 text-red-300 ring-1 ring-red-900/50;
+  }
+
+  .badge-warn {
+    @apply badge bg-amber-100 text-amber-700;
+  }
+  .dark .badge-warn {
+    @apply bg-amber-950/60 text-amber-300 ring-1 ring-amber-900/50;
+  }
+
+  .badge-success {
+    @apply badge bg-emerald-100 text-emerald-700;
+  }
+  .dark .badge-success {
+    @apply bg-emerald-950/60 text-emerald-300 ring-1 ring-emerald-900/50;
+  }
+
+  .badge-info {
+    @apply badge bg-sky-100 text-sky-700;
+  }
+  .dark .badge-info {
+    @apply bg-sky-950/60 text-sky-300 ring-1 ring-sky-900/50;
+  }
+
+  .badge-neutral {
+    @apply badge bg-slate-100 text-slate-700;
+  }
+  .dark .badge-neutral {
+    @apply bg-slate-800 text-slate-300 ring-1 ring-slate-700;
+  }
+
+  .gradient-text {
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .dark .glass {
+    background: rgba(15, 23, 42, 0.6);
+  }
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, #fff5f3 0%, #ffffff 50%, #f0f9ff 100%);
+}
+
+html.dark .gradient-bg {
+  background: linear-gradient(
+    135deg,
+    #0b1020 0%,
+    #131a33 50%,
+    #0c1a2e 100%
+  );
+}
+
+.gradient-border {
+  position: relative;
+}
+
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  background: linear-gradient(135deg, #f04423, #ff6b58, transparent);
+  border-radius: inherit;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
