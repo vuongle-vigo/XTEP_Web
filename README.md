@@ -100,3 +100,8 @@ File `.xlsx` cần có 3 sheet:
 3. **ThongKe** — Dữ liệu chấm công máy
 
 Cùng với file `ca_lam_xtep.xlsx` ở thư mục BE/ (đã có sẵn).
+
+Cách chạy file:
+nohup uvicorn api:app --host 0.0.0.0 --port 8001 > /tmp/be.log 2>&1 &
+
+nohup npx next start -p 3000 > /tmp/fe.log 2>&1 &

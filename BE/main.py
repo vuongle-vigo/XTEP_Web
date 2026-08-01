@@ -5,6 +5,25 @@ from calam import parse_ca_lam
 from common import remove_accents
 
 
+NGHI_TOI_DA = 5
+KEY_TONG_QUAN = "_tong"
+
+
+def format_ca(ca_in, ca_out):
+    """Format cặp giờ vào-ra của ca làm thành chuỗi 'X.XXh - Y.YYh'."""
+    return f"{ca_in:.2f}h - {ca_out:.2f}h"
+
+
+def co_cham_cong_may(time):
+    """Kiểm tra time (in/out từ máy) có phải là chấm công hợp lệ không."""
+    if not isinstance(time, (list, tuple)) or len(time) < 2:
+        return False
+    cc_in, cc_out = time
+    if not isinstance(cc_in, (int, float)) or not isinstance(cc_out, (int, float)):
+        return False
+    return cc_in > 0 and cc_out > 0
+
+
 def xac_dinh_ca_lam(cham_cong, ca_lam_list):
     """Tìm ca làm có tổng lệch giờ vào/ra nhỏ nhất."""
     if not isinstance(cham_cong, (list, tuple)) or len(cham_cong) < 2:
@@ -107,26 +126,26 @@ def phat_hien_sai_sot(bangcong_gio, chamcong, tangca_gio, ca_lam):
         return issues
     
     if cc_in > ca_in:
-        issues.append(f"Đi muộn {(cc_in - ca_in) * 60:.0f}p (vào {cc_in:.2f}h, ca {ca_in:.2f}h)")
-    
+        issues.append(f"Đi muộn {(cc_in - ca_in) * 60:.0f}p (vào {cc_in:.2f}h, ca {format_ca(ca_in, ca_out)})")
+
     if cc_out < ca_out:
-        issues.append(f"Về sớm {(ca_out - cc_out) * 60:.0f}p (ra {cc_out:.2f}h, ca {ca_out:.2f}h)")
-    
+        issues.append(f"Về sớm {(ca_out - cc_out) * 60:.0f}p (ra {cc_out:.2f}h, ca {format_ca(ca_in, ca_out)})")
+
     cc_duration = cc_out - cc_in
     ca_duration = ca_out - ca_in
     if cc_duration < ca_duration:
-        issues.append(f"Làm thiếu {(ca_duration - cc_duration) * 60:.0f}p so với ca (máy={cc_duration*60:.0f}p, ca={ca_duration*60:.0f}p)")
-    
+        issues.append(f"Làm thiếu {(ca_duration - cc_duration) * 60:.0f}p so với ca {format_ca(ca_in, ca_out)} (máy={cc_duration*60:.0f}p, ca={ca_duration*60:.0f}p)")
+
     tc = tangca_gio or 0
     tong_ghi = bangcong_gio + tc
     diff_tong = cc_duration - tong_ghi
-    
+
     if diff_tong < 0:
         issues.append(f"Máy < BC+TC: máy={cc_duration*60:.0f}p, BC+TC={tong_ghi*60:.0f}p (thiếu {abs(diff_tong)*60:.0f}p - ghi nhiều hơn thực tế)")
-    
+
     if tc > 0 and ca_in <= cc_in and cc_out <= ca_out:
-        issues.append(f"Ghi TC={tc}h nhưng giờ máy ({cc_in:.2f}-{cc_out:.2f}h) nằm trong ca ({ca_in:.2f}-{ca_out:.2f}h)")
-    
+        issues.append(f"Ghi TC={tc}h nhưng giờ máy ({cc_in:.2f}-{cc_out:.2f}h) nằm trong ca ({format_ca(ca_in, ca_out)})")
+
     return issues
 
 
@@ -167,21 +186,36 @@ def kiem_tra_bang_cong(filename, calamfile='ca_lam_xtep.xlsx'):
         # if nhanvien != "tran phuc trung":
         #     continue
         # print(f"time_in_out: {time_in_out}")
+
+        so_ngay_nghi = 0
+        ngay_nghi_list = []
+
         for day, time in time_in_out.items():
             thu = thu_ngay[day - 1][1]
             calam_info_item = calam_info.get(thu)
             calam_true = xac_dinh_ca_lam(time, calam_info_item)
             # print(f"calam_true: {calam_true}")
             bangcong_day = bangcong_info_item[day]
-            tangca_day = tangca_info_item.get(day) or 0
-            
+            tangca_day = tangca_info_item.get(day) or 0 if tangca_info_item else 0
+
             sai_sot = phat_hien_sai_sot(bangcong_day, time, tangca_day, calam_true)
             if sai_sot:
                 issues[day] = sai_sot
-        
+
+            if bangcong_day == 0 and not co_cham_cong_may(time):
+                so_ngay_nghi += 1
+                ngay_nghi_list.append(day)
+
+        if so_ngay_nghi > NGHI_TOI_DA:
+            if not issues:
+                issues = {}
+            issues[KEY_TONG_QUAN] = [
+                f"Nghỉ {so_ngay_nghi} ngày trong tháng (vượt ngưỡng {NGHI_TOI_DA} ngày): {sorted(ngay_nghi_list)}"
+            ]
+
         if issues:
             result[nhanvien] = issues
-    
+
     return result
 
 
@@ -189,15 +223,20 @@ def in_bao_cao(filename, result=None):
     """In báo cáo ra console."""
     if result is None:
         result = kiem_tra_bang_cong(filename)
-    
+
     print(f"\n=== Báo cáo: {filename} ===")
     for nhanvien, issues in result.items():
         print(f"\n--- {nhanvien} ---")
+        if KEY_TONG_QUAN in issues:
+            for s in issues[KEY_TONG_QUAN]:
+                print(f"  [TỔNG QUAN] {s}")
+            del issues[KEY_TONG_QUAN]
         for day, sai_sot in issues.items():
             print(f"  Ngày {day}:")
             for s in sai_sot:
                 print(f"    - {s}")
     return result
+
 
 
 if __name__ == "__main__":
