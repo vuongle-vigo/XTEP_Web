@@ -132,6 +132,33 @@ export function formatHour(value: number | string | undefined): string {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
+function convertHourTokenToHHMM(match: string): string {
+  const num = parseFloat(match);
+  if (!isFinite(num)) return match;
+  const h = Math.floor(num);
+  const m = Math.round((num - h) * 60);
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+}
+
+export function formatIssueText(text: string): string {
+  if (!text) return text;
+  let out = text.replace(/(\d{1,2}\.\d{1,2})h/g, (_full, num) => {
+    const n = parseFloat(num);
+    const h = Math.floor(n);
+    const m = Math.round((n - h) * 60);
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+  });
+  out = out.replace(/(\d{1,2}\.\d{2})-(\d{1,2}\.\d{2})h/g, (_full, a, b) => {
+    return `${convertHourTokenToHHMM(a)}-${convertHourTokenToHHMM(b)}`;
+  });
+  out = out.replace(/(\d+(?:\.\d+)?)p/g, (_full, num) => {
+    const n = parseInt(num, 10);
+    if (!isFinite(n)) return _full;
+    return `${n}p`;
+  });
+  return out;
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
