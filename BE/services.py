@@ -87,14 +87,6 @@ def save_uploaded_file(filename: str, content: bytes) -> dict:
         "has_ca_lam_info": False,
     }
     save_files_meta(meta)
-
-    # Upload lại -> kết quả check cũ không còn hợp lệ
-    try:
-        from check_cache import invalidate
-        invalidate(filename)
-    except Exception:
-        pass
-
     return meta[filename]
 
 
@@ -115,14 +107,6 @@ def delete_uploaded_file(filename: str) -> bool:
     if filename in meta:
         del meta[filename]
         save_files_meta(meta)
-
-    # Xoá cache entry tương ứng
-    try:
-        from check_cache import invalidate
-        invalidate(filename)
-    except Exception:
-        pass
-
     return True
 
 

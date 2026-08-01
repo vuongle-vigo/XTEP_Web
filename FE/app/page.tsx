@@ -48,6 +48,7 @@ export default function HomePage() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [checks, setChecks] = useState<Record<string, CheckResult | null>>({});
   const [loadingFiles, setLoadingFiles] = useState(true);
+  const [loadingCheck, setLoadingCheck] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [filterCat, setFilterCat] = useState<IssueCategory | "all">("all");
   const [search, setSearch] = useState("");
@@ -68,28 +69,49 @@ export default function HomePage() {
           naturalSortKey(a.filename)[2].localeCompare(naturalSortKey(b.filename)[2])
       );
       setFiles(sortedFiles);
-      const map: Record<string, CheckResult | null> = {};
-      await Promise.all(
-        sortedFiles.map(async (f) => {
-          try {
-            map[f.filename] = await api.check(f.filename);
-          } catch {
-            map[f.filename] = null;
-          }
-        })
-      );
-      setChecks(map);
+      // Lazy: KHÔNG check gì ở đây. Check sẽ chạy khi user click chọn file.
+      // Xoá các check entry của file không còn tồn tại trong list.
+      setChecks((prev) => {
+        const next: Record<string, CheckResult | null> = {};
+        for (const f of sortedFiles) {
+          if (f.filename in prev) next[f.filename] = prev[f.filename];
+        }
+        return next;
+      });
+      // Auto-select file đầu tiên và trigger check
       if (sortedFiles.length > 0) {
-        const firstWithIssues = sortedFiles.find(
-          (f) => (map[f.filename]?.summary?.total_issues ?? 0) > 0
-        );
-        setSelected(firstWithIssues?.filename ?? sortedFiles[0].filename);
+        const first = sortedFiles[0].filename;
+        setSelected(first);
+        // Background check cho file đầu (không block UI)
+        ensureChecked(first);
       } else {
         setSelected(null);
       }
     } finally {
       setLoadingFiles(false);
     }
+  };
+
+  // Chạy check cho 1 file (lazy load khi user chọn).
+  const ensureChecked = async (filename: string) => {
+    // Đã có kết quả (kể cả null = lỗi) thì thôi
+    if (filename in checks) return;
+    setLoadingCheck(true);
+    try {
+      const result = await api.check(filename);
+      setChecks((prev) => ({ ...prev, [filename]: result }));
+    } catch {
+      setChecks((prev) => ({ ...prev, [filename]: null }));
+    } finally {
+      setLoadingCheck(false);
+    }
+  };
+
+  const selectFile = async (filename: string) => {
+    setSelected(filename);
+    setExpandedNVs({});
+    setSelectedDay({});
+    await ensureChecked(filename);
   };
 
   useEffect(() => {
@@ -230,11 +252,7 @@ export default function HomePage() {
                 return (
                   <div
                     key={f.filename}
-                    onClick={() => {
-                      setSelected(f.filename);
-                      setExpandedNVs({});
-                      setSelectedDay({});
-                    }}
+                    onClick={() => selectFile(f.filename)}
                     className={cn(
                       "p-3 cursor-pointer transition-colors group",
                       isSelected
@@ -269,7 +287,7 @@ export default function HomePage() {
                         <div className="mt-1.5">
                           {c === undefined ? (
                             <span className="text-[10px] text-slate-400">
-                              ...
+                              Chưa phân tích
                             </span>
                           ) : c === null ? (
                             <span className="badge-error text-[10px]">
@@ -322,12 +340,20 @@ export default function HomePage() {
                 Hoặc upload file mới ở khu vực phía trên
               </div>
             </div>
-          ) : !selectedResult ? (
+          ) : selectedResult === undefined && loadingCheck ? (
             <div className="card p-12 text-center text-slate-500 dark:text-slate-400">
               <Loader2 className="w-8 h-8 animate-spin mx-auto text-brand-500" />
               <div className="mt-3">Đang phân tích {selected}...</div>
             </div>
-          ) : (
+          ) : selectedResult === null ? (
+            <div className="card p-12 text-center text-slate-500 dark:text-slate-400">
+              <AlertTriangle className="w-12 h-12 mx-auto text-red-400" />
+              <div className="mt-3 font-medium text-slate-900 dark:text-slate-100">
+                Lỗi phân tích file {selected}
+              </div>
+              <div className="text-sm mt-1">Thử click lại file khác hoặc reload trang</div>
+            </div>
+          ) : selectedResult ? (
             <FileDetail
               filename={selected}
               result={selectedResult}
@@ -341,7 +367,7 @@ export default function HomePage() {
               setSelectedDay={setSelectedDay}
               filteredEmployees={filteredEmployees}
             />
-          )}
+          ) : null}
         </div>
       </div>
     </div>

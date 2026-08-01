@@ -75,3 +75,4 @@ $RECYCLE.BIN/
 *.temp
 *.pid
 *.pid.lock
+FE/FE/next.config.js

@@ -131,18 +131,6 @@ def api_check(filename: str, calamfile: str = "ca_lam_xtep.xlsx"):
     calam_full_path = BASE_DIR / calamfile
     calamfile_to_use = str(calam_full_path) if calam_full_path.exists() else calamfile
 
-    # Cache: tránh chạy lại kiem_tra_bang_cong + build summary khi file + ca_lam không đổi
-    from check_cache import get as cache_get, set as cache_set, clear_if_calam_changed, make_cache_key
-    clear_if_calam_changed(calamfile_to_use)
-
-    cache_key = make_cache_key(filename, file_path, calamfile_to_use)
-    if cache_key is None:
-        raise HTTPException(status_code=404, detail=f"File '{filename}' không tồn tại trên ổ đĩa")
-
-    cached = cache_get(filename, file_path, calamfile_to_use)
-    if cached is not None:
-        return cached
-
     try:
         result = kiem_tra_bang_cong(str(file_path), calamfile=calamfile_to_use)
     except FileNotFoundError as e:
@@ -190,16 +178,11 @@ def api_check(filename: str, calamfile: str = "ca_lam_xtep.xlsx"):
         "issue_types": issue_types,
     }
 
-    payload = {
+    return {
         "filename": filename,
         "summary": summary,
         "details": result,
     }
-
-    # Cache toàn bộ response (đã có summary) để lần sau trả thẳng
-    cache_set(filename, file_path, calamfile_to_use, payload)
-
-    return payload
 
 
 # ===== Helpers =====
