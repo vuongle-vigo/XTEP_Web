@@ -1,0 +1,11 @@
+# Next.js
+.next/
+out/
+node_modules/
+*.log
+.env*.local
+.DS_Store
+
+# Editor
+.vscode/
+.idea/

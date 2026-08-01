@@ -2,7 +2,7 @@ from tangca import get_tangca_info
 from bangcong import get_bangcong_info
 from thongke import get_chamcong_info, get_thu_ngay
 from calam import parse_ca_lam
-from common import remove_accents
+from common import remove_accents, format_minutes
 
 
 NGHI_TOI_DA = 5
@@ -65,83 +65,102 @@ def phat_hien_sai_sot(bangcong_gio, chamcong, tangca_gio, ca_lam):
     - Vào sớm / Ra trễ / Làm thừa → KHÔNG phải sai sót
     - Máy > BC+TC → KHÔNG phải sai sót (NV làm thêm, chưa ghi TC = user tự xử)
     - Chỉ báo khi máy < BC+TC (NV ghi nhiều hơn thực tế → thiệt hại công ty)
+    - Quên checkin (cc_in NaN, có cc_out) / Quên checkout (cc_out NaN, có cc_in)
+      → phân biệt rõ ràng.
+    - Khi ca_lam=None (không tìm được ca) → fallback ca mặc định 9.00-17.00
+      để vẫn phát hiện đi muộn/về sớm/làm thiếu.
     """
     issues = []
-    
+
     if ca_lam is None:
         if bangcong_gio is None or bangcong_gio == 0:
+            if not isinstance(chamcong, (list, tuple)) or len(chamcong) < 2:
+                return []
+            cc_in, cc_out = chamcong
+            if cc_in == "NaN" and cc_out == "NaN":
+                return []
+            if cc_in == "NaN" and isinstance(cc_out, (int, float)) and cc_out > 0:
+                return [f"BC=0h nhưng máy ghi checkout={cc_out:.2f}h - có vẻ QUÊN CHECKIN"]
+            if cc_out == "NaN" and isinstance(cc_in, (int, float)) and cc_in > 0:
+                return [f"BC=0h nhưng máy ghi checkin={cc_in:.2f}h - có vẻ QUÊN CHECKOUT"]
+            if cc_in in ("V", "Off") or cc_out in ("V", "Off"):
+                return []
+            if isinstance(cc_in, (int, float)) and isinstance(cc_out, (int, float)) and cc_in > 0 and cc_out > cc_in:
+                return [f"BC=0h (nghỉ) nhưng máy ghi ({cc_in:.2f}, {cc_out:.2f})"]
             return []
-        
+
         if not isinstance(chamcong, (list, tuple)) or len(chamcong) < 2:
             return [f"BC={bangcong_gio}h nhưng không có chấm công máy"]
-        
+
         cc_in, cc_out = chamcong
-        
+
         if cc_in in ("V", "Off") or cc_out in ("V", "Off"):
             return [f"Máy ghi vắng nhưng BC={bangcong_gio}h"]
-        
+
+        if cc_in == "NaN" or cc_out == "NaN":
+            if cc_in == "NaN" and isinstance(cc_out, (int, float)) and cc_out > 0:
+                return [f"BC={bangcong_gio}h nhưng máy chỉ ghi checkout={cc_out:.2f}h - có vẻ QUÊN CHECKIN"]
+            if cc_out == "NaN" and isinstance(cc_in, (int, float)) and cc_in > 0:
+                return [f"BC={bangcong_gio}h nhưng máy chỉ ghi checkin={cc_in:.2f}h - có vẻ QUÊN CHECKOUT"]
+            return [f"Máy không ghi nhận được giờ nhưng BC={bangcong_gio}h"]
+
         if not isinstance(cc_in, (int, float)) or not isinstance(cc_out, (int, float)):
             return [f"Chấm công không hợp lệ: {chamcong}"]
-        
+
         if cc_out <= cc_in:
             return [f"Chấm công vào/ra không hợp lệ: ({cc_in}, {cc_out})"]
-        
-        issues.append(f"Không xác định được ca làm (CC: {cc_in:.2f}-{cc_out:.2f}h)")
-        
-        cc_duration = cc_out - cc_in
-        tc = tangca_gio or 0
-        tong_ghi = bangcong_gio + tc
-        diff = cc_duration - tong_ghi
-        
-        if diff < 0:
-            issues.append(f"Máy={cc_duration*60:.0f}p < BC+TC={tong_ghi*60:.0f}p (thiếu {abs(diff)*60:.0f}p)")
-        
-        return issues
-    
+
+        # Không xác định được ca → fallback 9-17 để vẫn phát hiện đi muộn/về sớm/làm thiếu
+        ca_lam = (9.0, 17.0)
+
     if bangcong_gio is None:
         return [f"BC=None, máy={chamcong}"]
-    
+
     if not isinstance(chamcong, (list, tuple)) or len(chamcong) < 2:
         return [f"BC={bangcong_gio}h nhưng không có chấm công máy"]
-    
+
     cc_in, cc_out = chamcong
-    
+
     if cc_in in ("V", "Off") or cc_out in ("V", "Off"):
         return [f"Máy ghi vắng ({cc_in}) nhưng BC={bangcong_gio}h"] if bangcong_gio > 0 else []
-    
+
     if cc_in == "NaN" or cc_out == "NaN":
+        if cc_in == "NaN" and isinstance(cc_out, (int, float)) and cc_out > 0:
+            return [f"BC={bangcong_gio}h nhưng máy chỉ ghi checkout={cc_out:.2f}h - có vẻ QUÊN CHECKIN"]
+        if cc_out == "NaN" and isinstance(cc_in, (int, float)) and cc_in > 0:
+            return [f"BC={bangcong_gio}h nhưng máy chỉ ghi checkin={cc_in:.2f}h - có vẻ QUÊN CHECKOUT"]
         return [f"Máy không ghi nhận được giờ nhưng BC={bangcong_gio}h"] if bangcong_gio > 0 else []
-    
+
     if not isinstance(cc_in, (int, float)) or not isinstance(cc_out, (int, float)):
         return [f"Chấm công không hợp lệ: {chamcong}"]
-    
+
     if cc_out <= cc_in:
         return [f"CC vào/ra không hợp lệ: ({cc_in}, {cc_out})"]
-    
+
     ca_in, ca_out = ca_lam
-    
+
     if bangcong_gio == 0:
         if cc_in > 0 or cc_out > 0:
             issues.append(f"BC=0h (nghỉ) nhưng máy ghi ({cc_in:.2f}, {cc_out:.2f})")
         return issues
-    
+
     if cc_in > ca_in:
-        issues.append(f"Đi muộn {(cc_in - ca_in) * 60:.0f}p (vào {cc_in:.2f}h, ca {format_ca(ca_in, ca_out)})")
+        issues.append(f"Đi muộn {format_minutes(cc_in - ca_in)} (vào {cc_in:.2f}h, ca {format_ca(ca_in, ca_out)})")
 
     if cc_out < ca_out:
-        issues.append(f"Về sớm {(ca_out - cc_out) * 60:.0f}p (ra {cc_out:.2f}h, ca {format_ca(ca_in, ca_out)})")
+        issues.append(f"Về sớm {format_minutes(ca_out - cc_out)} (ra {cc_out:.2f}h, ca {format_ca(ca_in, ca_out)})")
 
     cc_duration = cc_out - cc_in
     ca_duration = ca_out - ca_in
     if cc_duration < ca_duration:
-        issues.append(f"Làm thiếu {(ca_duration - cc_duration) * 60:.0f}p so với ca {format_ca(ca_in, ca_out)} (máy={cc_duration*60:.0f}p, ca={ca_duration*60:.0f}p)")
+        issues.append(f"Làm thiếu {format_minutes(ca_duration - cc_duration)} so với ca {format_ca(ca_in, ca_out)} (máy={format_minutes(cc_duration)}, ca={format_minutes(ca_duration)})")
 
     tc = tangca_gio or 0
     tong_ghi = bangcong_gio + tc
     diff_tong = cc_duration - tong_ghi
 
     if diff_tong < 0:
-        issues.append(f"Máy < BC+TC: máy={cc_duration*60:.0f}p, BC+TC={tong_ghi*60:.0f}p (thiếu {abs(diff_tong)*60:.0f}p - ghi nhiều hơn thực tế)")
+        issues.append(f"Máy < BC+TC: máy={format_minutes(cc_duration)}, BC={format_minutes(bangcong_gio)}, TC={format_minutes(tc)}, BC+TC={format_minutes(tong_ghi)} (thiếu {format_minutes(abs(diff_tong))} - ghi nhiều hơn thực tế)")
 
     if tc > 0 and ca_in <= cc_in and cc_out <= ca_out:
         issues.append(f"Ghi TC={tc}h nhưng giờ máy ({cc_in:.2f}-{cc_out:.2f}h) nằm trong ca ({format_ca(ca_in, ca_out)})")
@@ -175,7 +194,6 @@ def kiem_tra_bang_cong(filename, calamfile='ca_lam_xtep.xlsx'):
     thongke_info = get_chamcong_info(filename)
     ca_lam_dict = parse_ca_lam(calamfile)
     calam_info = lay_calam_theo_filename(filename, ca_lam_dict)
-    
     result = {}
     for nhanvien, time_in_out in thongke_info.items():
         issues = {}
@@ -183,21 +201,24 @@ def kiem_tra_bang_cong(filename, calamfile='ca_lam_xtep.xlsx'):
         tangca_info_item = tangca_info.get(nhanvien)
         if not bangcong_info_item:
             continue
-        # if nhanvien != "tran phuc trung":
+        # if nhanvien != "nguyen duc giang":
         #     continue
+        # print(f"nhanvien: {nhanvien}")
         # print(f"time_in_out: {time_in_out}")
 
         so_ngay_nghi = 0
         ngay_nghi_list = []
 
         for day, time in time_in_out.items():
+            # if day != 25:
+            #     continue
             thu = thu_ngay[day - 1][1]
             calam_info_item = calam_info.get(thu)
             calam_true = xac_dinh_ca_lam(time, calam_info_item)
             # print(f"calam_true: {calam_true}")
             bangcong_day = bangcong_info_item[day]
             tangca_day = tangca_info_item.get(day) or 0 if tangca_info_item else 0
-
+            # print(f"bangcong_day: {bangcong_day}")
             sai_sot = phat_hien_sai_sot(bangcong_day, time, tangca_day, calam_true)
             if sai_sot:
                 issues[day] = sai_sot
@@ -238,13 +259,10 @@ def in_bao_cao(filename, result=None):
     return result
 
 
-
 if __name__ == "__main__":
     import sys
     
     if len(sys.argv) > 1:
         filename = sys.argv[1]
-    else:
-        filename = '1. ROYAL.xlsx'
     
-    in_bao_cao(filename)
+        in_bao_cao(filename)
