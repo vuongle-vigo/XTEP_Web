@@ -2,11 +2,31 @@
 Service layer: lưu trữ file upload, quản lý danh sách file, đọc data thô.
 """
 import os
+import re
 import json
 import shutil
 from pathlib import Path
 from typing import Optional
 from datetime import datetime
+
+
+_LEADING_NUM_RE = re.compile(r"^\s*(\d+)")
+
+
+def _natural_sort_key(name: str):
+    """Sort key theo số ở đầu tên file (natural sort).
+
+    Ví dụ:
+        '1. haha.xlsx'   -> (0, 1,  '1. haha.xlsx')
+        '2. hehe.xlsx'   -> (0, 2,  '2. hehe.xlsx')
+        '15. ấkf.xlsx'   -> (0, 15, '15. ấkf.xlsx')
+
+    File không có số ở đầu sẽ xếp sau, theo alphabet (lowercase).
+    """
+    m = _LEADING_NUM_RE.match(name or "")
+    if m:
+        return (0, int(m.group(1)), name.lower())
+    return (1, 0, (name or "").lower())
 
 # Thư mục gốc của BE
 BASE_DIR = Path(__file__).resolve().parent
@@ -33,7 +53,12 @@ def save_files_meta(meta: dict) -> None:
 
 
 def list_uploaded_files() -> list:
-    """Trả về danh sách file đã upload, kèm metadata."""
+    """Trả về danh sách file đã upload, kèm metadata.
+
+    Thứ tự: theo số ở đầu tên file (natural sort, tăng dần).
+    Ví dụ: 1. haha -> 2. hehe -> 15. ấkf
+    File không có số ở đầu xếp sau, theo alphabet.
+    """
     meta = load_files_meta()
     files = []
     for name, info in meta.items():
@@ -45,7 +70,7 @@ def list_uploaded_files() -> list:
                 "uploaded_at": info.get("uploaded_at"),
                 "has_ca_lam_info": info.get("has_ca_lam_info", False),
             })
-    files.sort(key=lambda x: x.get("uploaded_at") or "", reverse=True)
+    files.sort(key=lambda x: _natural_sort_key(x.get("filename", "")))
     return files
 
 

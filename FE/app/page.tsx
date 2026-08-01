@@ -61,10 +61,16 @@ export default function HomePage() {
     setLoadingFiles(true);
     try {
       const data = await api.listFiles();
-      setFiles(data.files);
+      const sortedFiles = [...data.files].sort(
+        (a, b) =>
+          naturalSortKey(a.filename)[0] - naturalSortKey(b.filename)[0] ||
+          naturalSortKey(a.filename)[1] - naturalSortKey(b.filename)[1] ||
+          naturalSortKey(a.filename)[2].localeCompare(naturalSortKey(b.filename)[2])
+      );
+      setFiles(sortedFiles);
       const map: Record<string, CheckResult | null> = {};
       await Promise.all(
-        data.files.map(async (f) => {
+        sortedFiles.map(async (f) => {
           try {
             map[f.filename] = await api.check(f.filename);
           } catch {
@@ -73,11 +79,11 @@ export default function HomePage() {
         })
       );
       setChecks(map);
-      if (data.files.length > 0) {
-        const firstWithIssues = data.files.find(
+      if (sortedFiles.length > 0) {
+        const firstWithIssues = sortedFiles.find(
           (f) => (map[f.filename]?.summary?.total_issues ?? 0) > 0
         );
-        setSelected(firstWithIssues?.filename ?? data.files[0].filename);
+        setSelected(firstWithIssues?.filename ?? sortedFiles[0].filename);
       } else {
         setSelected(null);
       }
@@ -682,4 +688,13 @@ function CategoryChip({
 
 function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Sort theo số ở đầu tên file (natural sort).
+// 1. haha -> 2. hehe -> 15. ấkf
+// File không có số ở đầu xếp sau, theo alphabet.
+function naturalSortKey(name: string): [number, number, string] {
+  const m = /^\s*(\d+)/.exec(name || "");
+  if (m) return [0, parseInt(m[1], 10), (name || "").toLowerCase()];
+  return [1, 0, (name || "").toLowerCase()];
 }
