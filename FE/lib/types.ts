@@ -132,6 +132,9 @@ export function formatHour(value: number | string | undefined): string {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
+// Match kiểu "giờ thực" = số có phần thập phân >= 2 chữ số (vd 14.77h, 21.5h không match).
+// Tránh convert nhầm "số tiếng" dạng 6.0h, 8.0h (TC=, BC=, máy=...).
+// Giữ nguyên định dạng "HhMp" (vd 7h14p, 8h) - đã dễ đọc.
 function convertHourTokenToHHMM(match: string): string {
   const num = parseFloat(match);
   if (!isFinite(num)) return match;
@@ -142,19 +145,14 @@ function convertHourTokenToHHMM(match: string): string {
 
 export function formatIssueText(text: string): string {
   if (!text) return text;
-  let out = text.replace(/(\d{1,2}\.\d{1,2})h/g, (_full, num) => {
-    const n = parseFloat(num);
-    const h = Math.floor(n);
-    const m = Math.round((n - h) * 60);
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-  });
-  out = out.replace(/(\d{1,2}\.\d{2})-(\d{1,2}\.\d{2})h/g, (_full, a, b) => {
+  // Match theo thứ tự ưu tiên: range "14.77-22.00h" -> "14:46-22:00"
+  // (regex range phải đứng trước regex đơn để tránh nuốt 2 số riêng)
+  let out = text.replace(/(\d{1,2}\.\d{2})-(\d{1,2}\.\d{2})h/g, (_full, a, b) => {
     return `${convertHourTokenToHHMM(a)}-${convertHourTokenToHHMM(b)}`;
   });
-  out = out.replace(/(\d+(?:\.\d+)?)p/g, (_full, num) => {
-    const n = parseInt(num, 10);
-    if (!isFinite(n)) return _full;
-    return `${n}p`;
+  // Match giờ đơn "14.77h" -> "14:46" (chỉ khi có >= 2 chữ số thập phân)
+  out = out.replace(/(\d{1,2}\.\d{2})h/g, (_full, num) => {
+    return convertHourTokenToHHMM(num);
   });
   return out;
 }

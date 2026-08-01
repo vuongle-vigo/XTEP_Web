@@ -10,6 +10,7 @@ import {
   CATEGORY_META,
   IssueCategory,
   categorizeIssue,
+  formatIssueText,
   formatBytes,
   formatDateTime,
 } from "@/lib/types";
@@ -667,7 +668,7 @@ function CategoryIssueRow({
     >
       <span className="shrink-0 leading-none mt-0.5">{meta.icon}</span>
       <span className={cn("flex-1", meta.color, darkColors[cat].split(" ").pop())}>
-        {issue}
+        {formatIssueText(issue)}
       </span>
     </div>
   );
