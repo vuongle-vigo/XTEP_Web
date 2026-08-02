@@ -30,6 +30,7 @@ def remove_accents(text):
 
     # Bỏ các ký tự dấu (combining characters)
     text = ''.join(char for char in text if unicodedata.category(char) != 'Mn')
+    text = text.strip()
 
     return text
 

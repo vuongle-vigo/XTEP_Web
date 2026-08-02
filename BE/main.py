@@ -21,6 +21,8 @@ def co_cham_cong_may(time):
     cc_in, cc_out = time
     if not isinstance(cc_in, (int, float)) or not isinstance(cc_out, (int, float)):
         return False
+    if time == "V" or time == "Off" or time == "NaN" or time == "P":
+        return False
     return cc_in > 0 and cc_out > 0
 
 
@@ -84,7 +86,10 @@ def phat_hien_sai_sot(bangcong_gio, chamcong, tangca_gio, ca_lam):
             if cc_out == "NaN" and isinstance(cc_in, (int, float)) and cc_in > 0:
                 return [f"BC=0h nhưng máy ghi checkin={cc_in:.2f}h - có vẻ QUÊN CHECKOUT"]
             if cc_in in ("V", "Off") or cc_out in ("V", "Off"):
-                return []
+                if tangca_gio > 0:
+                    return [f"Máy ghi vắng, BC=0h nhưng ghi tăng ca = {tangca_gio}h"]
+                else:
+                    return []
             if isinstance(cc_in, (int, float)) and isinstance(cc_out, (int, float)) and cc_in > 0 and cc_out > cc_in:
                 return [f"BC=0h (nghỉ) nhưng máy ghi ({cc_in:.2f}, {cc_out:.2f})"]
             return []
@@ -151,14 +156,14 @@ def phat_hien_sai_sot(bangcong_gio, chamcong, tangca_gio, ca_lam):
         issues.append(f"Về sớm {format_minutes(ca_out - cc_out)} (ra {cc_out:.2f}h, ca {format_ca(ca_in, ca_out)})")
 
     cc_duration = cc_out - cc_in
-    ca_duration = ca_out - ca_in
-    if cc_duration < ca_duration:
-        issues.append(f"Làm thiếu {format_minutes(ca_duration - cc_duration)} so với ca {format_ca(ca_in, ca_out)} (máy={format_minutes(cc_duration)}, ca={format_minutes(ca_duration)})")
+    # ca_duration = ca_out - ca_in
+    if cc_duration < bangcong_gio:
+        issues.append(f"Làm thiếu {format_minutes(bangcong_gio - cc_duration)} so với bảng công {bangcong_gio} (máy={format_minutes(cc_duration)}, ca={bangcong_gio})")
 
     tc = tangca_gio or 0
     tong_ghi = bangcong_gio + tc
     diff_tong = cc_duration - tong_ghi
-
+    print(f"cc_duration: {cc_duration}, bangcong_gio: {bangcong_gio}, tc: {tc}, tong_ghi: {tong_ghi}, diff_tong: {diff_tong}")
     if diff_tong < 0:
         issues.append(f"Máy < BC+TC: máy={format_minutes(cc_duration)}, BC={format_minutes(bangcong_gio)}, TC={format_minutes(tc)}, BC+TC={format_minutes(tong_ghi)} (thiếu {format_minutes(abs(diff_tong))} - ghi nhiều hơn thực tế)")
 
@@ -202,14 +207,23 @@ def kiem_tra_bang_cong(filename, calamfile='ca_lam_xtep.xlsx'):
         bangcong_info_item = bangcong_info.get(nhanvien)
         tangca_info_item = tangca_info.get(nhanvien)
         if not bangcong_info_item:
+            issues[KEY_TONG_QUAN] = [
+                f"Không tìm thấy bảng công cho {nhanvien}"
+            ]
+            result[nhanvien] = issues
             continue
-        # if nhanvien != "nguyen duc giang":
-        #     continue
-        # print(f"nhanvien: {nhanvien}")
-        # print(f"time_in_out: {time_in_out}")
+        if nhanvien != "nguyen thi thanh thuy":
+            continue
+        print(f"bangcong_info_item: {bangcong_info_item}")
+        print(f"time_in_out: {time_in_out}")
+        print(f"nhanvien: {nhanvien}")
+        print(f"tangca_info_item: {tangca_info_item}")
 
-        so_ngay_nghi = 0
-        ngay_nghi_list = []
+        so_ngay_nghi_bc = 0
+        ngay_nghi_list_bc = []
+
+        so_ngay_nghi_cc = 0
+        ngay_nghi_list_cc = []
 
         for day, time in time_in_out.items():
             # if day != 25:
@@ -220,19 +234,31 @@ def kiem_tra_bang_cong(filename, calamfile='ca_lam_xtep.xlsx'):
             bangcong_day = bangcong_info_item[day]
             tangca_day = tangca_info_item.get(day) or 0 if tangca_info_item else 0
             # print(f"bangcong_day: {bangcong_day}")
+            if day != 7:
+                continue
+            print(f"bangcong_day: {bangcong_day}, time: {time}, tangca_day: {tangca_day}, calam_true: {calam_true}")
             sai_sot = phat_hien_sai_sot(bangcong_day, time, tangca_day, calam_true)
             if sai_sot:
                 issues[day] = sai_sot
 
-            if bangcong_day == 0 and not co_cham_cong_may(time):
-                so_ngay_nghi += 1
-                ngay_nghi_list.append(day)
+            if bangcong_day == 0:
+                so_ngay_nghi_bc += 1
+                ngay_nghi_list_bc.append(day)
+            if not co_cham_cong_may(time):
+                so_ngay_nghi_cc += 1
+                ngay_nghi_list_cc.append(day)
 
-        if so_ngay_nghi > NGHI_TOI_DA:
+        if so_ngay_nghi_bc > NGHI_TOI_DA:
             if not issues:
                 issues = {}
             issues[KEY_TONG_QUAN] = [
-                f"Nghỉ {so_ngay_nghi} ngày trong tháng (vượt ngưỡng {NGHI_TOI_DA} ngày): {sorted(ngay_nghi_list)}"
+                f"Nghỉ bảng công {so_ngay_nghi} ngày trong tháng (vượt ngưỡng {NGHI_TOI_DA} ngày): {sorted(ngay_nghi_list)}"
+            ]
+        if so_ngay_nghi_cc > NGHI_TOI_DA:
+            if not issues:
+                issues = {}
+            issues[KEY_TONG_QUAN] = [
+                f"Nghỉ chấm công {so_ngay_nghi_cc} ngày trong tháng (vượt ngưỡng {NGHI_TOI_DA} ngày): {sorted(ngay_nghi_list_cc)}"
             ]
 
         if issues:

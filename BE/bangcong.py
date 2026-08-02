@@ -48,7 +48,3 @@ def get_bangcong_info(filename):
 
         bangcong_info[nhanvien_item] = bangcong
     return bangcong_info
-
-bangcong_info = get_bangcong_info('1. ROYAL.xlsx')
-with open('bangcong_info.json', 'w') as f:
-    json.dump(bangcong_info, f, indent=4)
