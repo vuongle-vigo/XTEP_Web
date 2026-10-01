@@ -212,12 +212,12 @@ def kiem_tra_bang_cong(filename, calamfile='ca_lam_xtep.xlsx'):
             ]
             result[nhanvien] = issues
             continue
-        if nhanvien != "nguyen thi thanh thuy":
-            continue
-        print(f"bangcong_info_item: {bangcong_info_item}")
-        print(f"time_in_out: {time_in_out}")
-        print(f"nhanvien: {nhanvien}")
-        print(f"tangca_info_item: {tangca_info_item}")
+        # if nhanvien != "nguyen thi thanh thuy":
+        #     continue
+        # print(f"bangcong_info_item: {bangcong_info_item}")
+        # print(f"time_in_out: {time_in_out}")
+        # print(f"nhanvien: {nhanvien}")
+        # print(f"tangca_info_item: {tangca_info_item}")
 
         so_ngay_nghi_bc = 0
         ngay_nghi_list_bc = []
