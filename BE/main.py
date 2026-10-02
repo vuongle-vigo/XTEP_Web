@@ -163,7 +163,6 @@ def phat_hien_sai_sot(bangcong_gio, chamcong, tangca_gio, ca_lam):
     tc = tangca_gio or 0
     tong_ghi = bangcong_gio + tc
     diff_tong = cc_duration - tong_ghi
-    print(f"cc_duration: {cc_duration}, bangcong_gio: {bangcong_gio}, tc: {tc}, tong_ghi: {tong_ghi}, diff_tong: {diff_tong}")
     if diff_tong < 0:
         issues.append(f"Máy < BC+TC: máy={format_minutes(cc_duration)}, BC={format_minutes(bangcong_gio)}, TC={format_minutes(tc)}, BC+TC={format_minutes(tong_ghi)} (thiếu {format_minutes(abs(diff_tong))} - ghi nhiều hơn thực tế)")
 
@@ -212,12 +211,6 @@ def kiem_tra_bang_cong(filename, calamfile='ca_lam_xtep.xlsx'):
             ]
             result[nhanvien] = issues
             continue
-        # if nhanvien != "nguyen thi thanh thuy":
-        #     continue
-        # print(f"bangcong_info_item: {bangcong_info_item}")
-        # print(f"time_in_out: {time_in_out}")
-        # print(f"nhanvien: {nhanvien}")
-        # print(f"tangca_info_item: {tangca_info_item}")
 
         so_ngay_nghi_bc = 0
         ngay_nghi_list_bc = []
@@ -226,17 +219,12 @@ def kiem_tra_bang_cong(filename, calamfile='ca_lam_xtep.xlsx'):
         ngay_nghi_list_cc = []
 
         for day, time in time_in_out.items():
-            # if day != 25:
-            #     continue
             thu = thu_ngay[day - 1][1]
             calam_info_item = calam_info.get(thu)
+            print(f"{thu} : {calam_info_item}")
             calam_true = xac_dinh_ca_lam(time, calam_info_item)
             bangcong_day = bangcong_info_item[day]
             tangca_day = tangca_info_item.get(day) or 0 if tangca_info_item else 0
-            # print(f"bangcong_day: {bangcong_day}")
-            if day != 7:
-                continue
-            print(f"bangcong_day: {bangcong_day}, time: {time}, tangca_day: {tangca_day}, calam_true: {calam_true}")
             sai_sot = phat_hien_sai_sot(bangcong_day, time, tangca_day, calam_true)
             if sai_sot:
                 issues[day] = sai_sot
@@ -249,17 +237,13 @@ def kiem_tra_bang_cong(filename, calamfile='ca_lam_xtep.xlsx'):
                 ngay_nghi_list_cc.append(day)
 
         if so_ngay_nghi_bc > NGHI_TOI_DA:
-            if not issues:
-                issues = {}
-            issues[KEY_TONG_QUAN] = [
-                f"Nghỉ bảng công {so_ngay_nghi} ngày trong tháng (vượt ngưỡng {NGHI_TOI_DA} ngày): {sorted(ngay_nghi_list)}"
-            ]
+            issues.setdefault(KEY_TONG_QUAN, []).append(
+                f"Nghỉ bảng công {so_ngay_nghi_bc} ngày trong tháng (vượt ngưỡng {NGHI_TOI_DA} ngày): {sorted(ngay_nghi_list_bc)}"
+            )
         if so_ngay_nghi_cc > NGHI_TOI_DA:
-            if not issues:
-                issues = {}
-            issues[KEY_TONG_QUAN] = [
+            issues.setdefault(KEY_TONG_QUAN, []).append(
                 f"Nghỉ chấm công {so_ngay_nghi_cc} ngày trong tháng (vượt ngưỡng {NGHI_TOI_DA} ngày): {sorted(ngay_nghi_list_cc)}"
-            ]
+            )
 
         if issues:
             result[nhanvien] = issues
